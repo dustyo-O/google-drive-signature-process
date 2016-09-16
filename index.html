@@ -1,0 +1,457 @@
+<html>
+<head>
+    <link rel="stylesheet" href="bower_components/flat-ui/dist/css/vendor/bootstrap/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="bower_components/flat-ui/dist/css/flat-ui.min.css"/>
+    <link rel="stylesheet" href="bower_components/font-awesome/css/font-awesome.min.css"/>
+</head>
+<body>
+<div id="authorize-div">
+    <span>Authorize access to Drive API</span>
+    <!--Button for the user to click to initiate auth sequence -->
+    <button class="btn btn-default" id="authorize-button" onclick="handleAuthClick(event)">
+        <i class="fa fa-google"></i> Authorize
+    </button>
+</div>
+<div id="app"></div>
+
+<script src="bower_components/flat-ui/dist/js/vendor/jquery.min.js"></script>
+<script src="bower_components/flat-ui/dist/js/flat-ui.min.js"></script>
+<script src="bower_components/flat-ui/js/radiocheck.js"></script>
+<script src="https://apis.google.com/js/client.js"></script>
+<script type="text/javascript">
+    // Your Client ID can be retrieved from your project in the Google
+    // Developer Console, https://console.developers.google.com
+    var CLIENT_ID = '647900384433-inuq19ebj8tpsopk34h3gslglh63q94b.apps.googleusercontent.com';
+
+    var SCOPES = ['https://www.googleapis.com/auth/drive'];
+
+    /**
+     * Check if current user has authorized this application.
+     */
+    function checkAuth() {
+        gapi.auth.authorize(
+                {
+                    'client_id': CLIENT_ID,
+                    'scope': SCOPES.join(' '),
+                    'immediate': true
+                }, handleAuthResult);
+    }
+
+    /**
+     * Handle response from authorization server.
+     *
+     * @param {Object} authResult Authorization result.
+     */
+    function handleAuthResult(authResult) {
+        var authorizeDiv = document.getElementById('authorize-div');
+        if (authResult && !authResult.error) {
+            // Hide auth UI, then load client library.
+            authorizeDiv.style.display = 'none';
+            loadDriveApi();
+        } else {
+            // Show auth UI, allowing the user to initiate authorization by
+            // clicking authorize button.
+            authorizeDiv.style.display = 'inline';
+        }
+    }
+
+    /**
+     * Initiate auth flow in response to user clicking authorize button.
+     *
+     * @param {Event} event Button click event.
+     */
+    function handleAuthClick(event) {
+        gapi.auth.authorize(
+                {client_id: CLIENT_ID, scope: SCOPES, immediate: false},
+                handleAuthResult);
+        return false;
+    }
+
+
+    /**
+     * Load Drive API client library.
+     */
+    function loadDriveApi() {
+        gapi.client.load('drive', 'v3', listFiles);
+
+
+
+    }
+
+    var breadcrumbs = [];
+
+    /**
+     * Print files.
+     */
+    function listFiles(parent) {
+        var q;
+        if (typeof parent === 'undefined')
+        {
+            parent = 'root';
+        }
+
+        q = "'" + parent + "' in parents";
+
+        var request = gapi.client.drive.files.list({
+            'pageSize': 1000,
+            'fields': "nextPageToken, files(id, name, mimeType)",
+            'q': q
+        });
+
+        var move_down_flag;
+
+
+        if (breadcrumbs[breadcrumbs.length - 2] === parent)
+        {
+            move_down_flag = false;
+        }
+        else
+        {
+            move_down_flag = true;
+        }
+
+
+        if (parent!=='root')
+        {
+            if (move_down_flag)
+            {
+                breadcrumbs[breadcrumbs.length] = parent;
+            }
+            else
+            {
+
+                breadcrumbs.splice(breadcrumbs.length - 1, 1);
+
+            }
+        }
+        else
+        {
+            breadcrumbs = ["root"];
+        }
+
+        console.log(breadcrumbs);
+
+        prepareFolderListTable();
+
+
+
+        request.execute(function(resp) {
+            //appendPre('Files:');
+            var files = resp.files;
+            if (files && files.length > 0) {
+
+                for (var i = 0; i < files.length; i++) {
+                    //console.log(files);
+                    var file = files[i];
+                    if (file.mimeType === 'application/vnd.google-apps.folder')
+                    {
+                        addFolderListRow(file);
+                    }
+
+                }
+
+
+
+                if ($('[data-toggle="switch"]').length) {
+                    $('[data-toggle="switch"]').bootstrapSwitch();
+                }
+
+                $("#app").append(
+                    $('<button/>', {class: "btn btn-lg btn-success", text: " Обработать выбранные папки"}).prepend(
+                        $("<span/>", {class: "fui-upload"})
+                    ).click(
+                         function(){
+                             step2()
+                         }
+                    )
+                );
+
+            } else {
+                //appendPre('No files found.');
+            }
+        });
+    }
+
+    var selected_folders = [];
+
+    function prepareFolderListTable()
+    {
+        $("#app").empty();
+        $("#app").append(
+            $("<table/>",{class: "table table-striped folder-list-table"}).append(
+                $("<tbody/>").append(
+                    $("<tr/>").append(
+                        $("<th/>")
+                    ).append(
+                        $("<th/>", {text: "Название файла"})
+                    ).append(
+                        $("<th/>")
+                    )
+                )
+            )
+        );
+
+        if (typeof (breadcrumbs[breadcrumbs.length - 2]) !== 'undefined')
+        {
+            $(".folder-list-table tbody").append(
+                $("<tr/>").append(
+                    $("<td/>").append(
+                            $("<span/>",{class: "fui-triangle-up"})
+                    )
+                ).append(
+                    $("<td/>", {}).append(
+                            $("<a/>",{text: '..', class: "folder-link", "data-id": breadcrumbs[breadcrumbs.length - 2], href: "#" + breadcrumbs[breadcrumbs.length - 2]})
+                    )
+                ).append(
+                    $("<td/>").append(
+
+                    )
+                )
+            );
+
+        }
+    }
+
+    function addFolderListRow(file)
+    {
+        console.log(selected_folders);
+        var checked = false;
+        if (selected_folders.indexOf(file.id) !== -1)
+        {
+            checked = 'checked';
+        }
+
+        $(".folder-list-table tbody").append(
+            $("<tr/>").append(
+                $("<td/>").append(
+                    $("<span/>",{class: "fui-folder"})
+                )
+            ).append(
+                $("<td/>", {}).append(
+                    $("<a/>",{text: file.name, class: "folder-link", "data-id": file.id, href: "#" + file.id})
+                )
+            ).append(
+                $("<td/>").append(
+                     $("<input/>", {class: "folder-switch",text: " Выбрать", type: "checkbox", "data-toggle": "switch", "data-id": file.id, checked: checked})
+                )
+            )
+        );
+    }
+
+    $(document).on("switchChange.bootstrapSwitch", ".folder-switch", function() {
+
+        if ($(this).is(":checked"))
+        {
+            if (selected_folders.indexOf($(this).data('id')) === -1)
+            {
+                selected_folders[selected_folders.length] = $(this).data('id');
+            }
+
+        }
+        else
+        {
+            while (selected_folders.indexOf($(this).data('id')) !== -1)
+            {
+                selected_folders.splice(selected_folders.indexOf($(this).data('id')),1);
+            }
+
+        }
+        console.log(selected_folders);
+    });
+
+    $(document).on("click", ".folder-link", function(event) {
+        event.preventDefault();
+
+        listFiles($(this).data('id'));
+    });
+
+    var progress_percent = null;
+    function step2()
+    {
+        console.log('step2 start');
+        if (progress_percent === null)
+        {
+            progress_percent = Math.floor(100/selected_folders.length);
+
+            prepareStep2();
+        }
+        var folder = selected_folders.pop();
+
+        if (folder)
+        {
+            processFolder(folder);
+        }
+        else
+        {
+            finish();
+        }
+    }
+
+    function prepareStep2()
+    {
+        $("#app").empty();
+        $("#app").append(
+            $("<div/>", {class: "row"}).append
+            (
+                $("<div/>", {class: "col-sm-12"}).append(
+                     $("<h3/>", {text: "Конвертирую, ждите..."}).append(
+                          $("<i/>", {class: "fa fa-refresh fa-spin"})
+                     )
+                )
+            )
+
+        ).append(
+            $("<div/>", {class: "row"}).append
+            (
+                $("<div/>", {class: "col-sm-12"}).append(
+                    $("<div/>",{class: "progress"})
+                )
+
+            )
+
+        );
+
+    }
+
+    function processFolder(folder) {
+
+        console.log('processing folder '+ folder);
+
+        var q;
+        if (typeof folder === 'undefined')
+        {
+            folder = 'root';
+        }
+
+        q = "'" + folder + "' in parents";
+
+        var request = gapi.client.drive.files.list({
+            'pageSize': 1000,
+            'fields': "nextPageToken, files(id, name, mimeType)",
+            'q': q
+        });
+
+
+        request.execute(function(resp) {
+            //appendPre('Files:');
+            var files = resp.files;
+            if (files && files.length === 2)
+            {
+                var result = {
+                    pdf: null,
+                    jpg: null
+                };
+
+                for (var i = 0; i < files.length; i++) {
+                    //console.log(files);
+                    var file = files[i];
+                    if (file.mimeType === 'image/jpeg')
+                    {
+                        result.jpg = JSON.stringify(file);
+                    }
+                    else
+                    {
+                        if (file.mimeType === 'application/pdf')
+                        {
+                            result.pdf = JSON.stringify(file);
+                        }
+                    }
+                }
+                //console.log(gapi.auth.getToken());
+                if (result.pdf && result.jpg)
+                {
+                    result.folder = folder;
+                    result.token = gapi.auth.getToken().access_token;
+
+                    $.ajax(
+                        {
+                            url: "process.php",
+                            type: "POST",
+                            data: result,
+                            dataType: "json"
+                        }
+                    ).done(
+                        function(msg)
+                        {
+                            if (msg.answer === 'ok')
+                            {
+                                $('.progress').append(
+                                        $("<div/>",{class:"progress-bar progress-bar-success"}).css("width", progress_percent + '%')
+                                );
+                            }
+                            else
+                            {
+                                $('.progress').append(
+                                        $("<div/>",{class:"progress-bar progress-bar-danger"}).css("width", progress_percent + '%')
+                                );
+
+                            }
+                        }
+                    ).fail(
+                        function(msg)
+                        {
+                            $('.progress').append(
+                                $("<div/>",{class:"progress-bar progress-bar-danger"}).css("width", progress_percent + '%')
+                            );
+                        }
+                    ).always(
+                        function()
+                        {
+                            step2();
+                        }
+                    );
+                }
+                else
+                {
+                    $('.progress').append(
+                            $("<div/>",{class:"progress-bar progress-bar-danger"}).css("width", progress_percent + '%')
+                    );
+                    step2();
+                }
+
+
+            } else {
+                //appendPre('No files found.');
+                $('.progress').append(
+                     $("<div/>",{class:"progress-bar progress-bar-danger"}).css("width", progress_percent + '%')
+                );
+                step2();
+            }
+        });
+    }
+
+    function finish()
+    {
+        $("#app i.fa-spin").removeClass("fa-spin")
+                .removeClass("fa-refresh")
+                .addClass("fa-check");
+        $("#app").append(
+            $("<div/>", {class: "row"}).append
+            (
+                $("<div/>", {class: "col-sm-12 text-center"}).append(
+                    $("<a/>", {href: "#start", text: "Начать с начала"}).append(
+                         $("<div/>").append(
+                               $("<img/>", {src: "bower_components/flat-ui/img/icons/svg/pencils.svg"})
+                         )
+                    ).click(
+                         function(e)
+                         {
+                             breadcrumbs = [];
+                             selected_folders = [];
+                             e.preventDefault();
+                             listFiles();
+                         }
+                    )
+                )
+            )
+
+        );
+
+    }
+
+
+</script>
+
+
+</body>
+</html>

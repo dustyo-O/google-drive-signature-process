@@ -1,0 +1,21 @@
+{
+  "name": "google-drive-signature-process",
+  "authors": [
+    "Alexandr Shleyko <a.shleyko@yandex.ru>"
+  ],
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "homepage": "",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "flat-ui": "*",
+    "font-awesome": "*"
+  }
+}
