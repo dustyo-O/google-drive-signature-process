@@ -113,7 +113,7 @@ JSON;
 
 
 
-$pie = explode('.',$pdf->name);
+$pie = pathinfo($pdf->name,PATHINFO_FILENAME);
 
 $fold_title = $pie[0];
 
