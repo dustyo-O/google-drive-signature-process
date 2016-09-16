@@ -113,9 +113,7 @@ JSON;
 
 
 
-$pie = pathinfo($pdf->name,PATHINFO_FILENAME);
-
-$fold_title = $pie[0];
+$fold_title = pathinfo($pdf->name,PATHINFO_FILENAME);
 
 $relfolder = $fold_title.'_'.time();
 $tmpfolder = './runtime/'.$relfolder;
@@ -225,7 +223,7 @@ $contents = file_get_contents($file);
 $size = filesize($file);
 
 $pdf_pie = explode('.',$pdf->name);
-$title = $pdf_pie[0]."jpg";
+$title = $fold_title.".jpg";
 
 
 $json = "
