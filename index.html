@@ -214,7 +214,7 @@
 
     function addFolderListRow(file)
     {
-        console.log(selected_folders);
+        //console.log(selected_folders);
         var checked = false;
         if (selected_folders.indexOf(file.id) !== -1)
         {
@@ -315,7 +315,7 @@
 
     function processFolder(folder) {
 
-        console.log('processing folder '+ folder);
+        //console.log('processing folder '+ folder);
 
         var q;
         if (typeof folder === 'undefined')
@@ -335,7 +335,7 @@
         request.execute(function(resp) {
             //appendPre('Files:');
             var files = resp.files;
-            if (files && files.length === 2)
+            if (files && files.length > 1)
             {
                 var result = {
                     pdf: null,
@@ -347,7 +347,12 @@
                     var file = files[i];
                     if (file.mimeType === 'image/jpeg')
                     {
-                        result.jpg = JSON.stringify(file);
+                        var pie = file.name.split('.');
+                        pie.splice(pie.length - 1, 1);
+                        var file_name = pie.join('.');
+                        var tail = file_name.substr(-7).toLowerCase();
+                        console.log(tail);
+                        if (tail === '_podpis') result.jpg = JSON.stringify(file);
                     }
                     else
                     {
